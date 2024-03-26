@@ -22,6 +22,7 @@ from igibson.utils.utils import parse_config
 
 from igibson.envs.igibson_env import iGibsonEnv
 from igibson.objects.ycb_object import YCBObject
+from igibson.objects.cube import Cube
 
 global gui 
 gui = "ig"
@@ -291,20 +292,22 @@ def main():
     s.viewer.initial_view_direction = [-0.7, 0, -0.7]
     s.viewer.reset_viewer()
     ############################### Creating some objects #####################
-    for _ in range(10):
-        obj = YCBObject("003_cracker_box")
-        s.import_object(obj)
-        obj.set_position_orientation(np.append(np.random.uniform(low=0, high=2, size=2), [1.8]), [0, 0, 0, 1])
+    cube = Cube(pos=[1,10,0], dim=[1,1,1], color=[1,0,0,1])
+    s.import_object(cube)
 
     action_generator = KeyboardController(robot=robot, simulator=s)
     action_generator.print_keyboard_teleop_info()
     step = 0
-    max_steps = 500
+    max_steps = -1
     while step != max_steps:
         action = (
             action_generator.get_teleop_action()
         ) 
         robot.apply_action(action)
+        
+        print(s.renderer.get_cube(mode="3d", use_robot_camera=True))
+
+
         for _ in range(10):
             s.step()
             step += 1
