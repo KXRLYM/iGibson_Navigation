@@ -1,0 +1,77 @@
+<launch>
+  <arg name="config" default="$(optenv RIDGEBACK_CONFIG base)" />
+
+  <param name="robot_description"
+         command="$(find ridgeback_description)/scripts/env_run
+                  $(find ridgeback_description)/urdf/configs/$(arg config)
+                  $(find xacro)/xacro $(find ridgeback_description)/urdf/ridgeback.urdf.xacro
+                  --inorder " />
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+  <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
+
+  <arg name="use_sim_time" default="true" />
+  <arg name="gui" default="true" />
+  <arg name="headless" default="false" />
+  <arg name="world_name" default="/home/karlym/catkin_ws/src/assets/single_obj.world" />
+
+  <arg name="x" default="0"/>
+  <arg name="y" default="0"/>
+  <arg name="z" default="0"/>
+
+    <!-- Launch Gazebo with the specified world -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="debug" value="0" />
+    <arg name="gui" value="$(arg gui)" />
+    <arg name="use_sim_time" value="$(arg use_sim_time)" />
+    <arg name="headless" value="$(arg headless)" />
+    <arg name="world_name" value="$(arg world_name)" />
+    <arg name="paused" value="false"/>
+  </include>
+  <node name="gazebo_ros" pkg="gazebo_ros" type="spawn_model" output="screen"
+        args="-urdf -param robot_description -model ridgeback -x $(arg x) -y $(arg y) -z $(arg z)" />
+
+  <node pkg="gmapping" type="slam_gmapping" name="slam_gmapping" output="screen">
+    <remap from="scan" to="front/scan"/>
+  </node>
+
+  <!--- Run Move Base -->
+  <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+
+    <rosparam file="$(find ridgeback_navigation)/params/costmap_common_params.yaml" command="load" ns="global_costmap" />
+    <rosparam file="$(find ridgeback_navigation)/params/costmap_common_params.yaml" command="load" ns="local_costmap" />
+    
+    <rosparam file="$(find ridgeback_navigation)/params/map_nav_params/local_costmap_params.yaml" command="load" />
+    <rosparam file="$(find ridgeback_navigation)/params/map_nav_params/global_costmap_params.yaml" command="load" />
+    
+    <rosparam file="$(find ridgeback_navigation)/params/base_local_planner_params.yaml" command="load" />
+    <rosparam file="$(find ridgeback_navigation)/params/move_base_params.yaml" command="load" />
+    
+    <param name="base_global_planner" type="string" value="navfn/NavfnROS" />
+    <param name="base_local_planner" value="base_local_planner/TrajectoryPlannerROS"/>
+  
+  </node>
+
+  <rosparam param="/gazebo_ros_control/pid_gains">
+    front_left_wheel:
+      p: 1
+      i: 0.1
+      d: 0
+    front_right_wheel:
+      p: 1
+      i: 0.1
+      d: 0
+    rear_left_wheel:
+      p: 1
+      i: 0.1
+      d: 0
+    rear_right_wheel:
+      p: 1
+      i: 0.1
+      d: 0
+  </rosparam>
+
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find simple_ridgeback_nbv)/rviz/robot.rviz" />
+
+  <node name="odom_transform" pkg="simple_ridgeback_nbv" type="odom_transform.py" output="screen" />
+
+</launch>
